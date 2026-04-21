@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NN Logistics — Доставка грузов по всему миру</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #0a0a0a;
+    --dark: #111318;
+    --card: #16191f;
+    --border: #1e2229;
+    --accent: #f5a623;
+    --accent2: #e8831a;
+    --text: #e8e8e8;
+    --muted: #7a808c;
+    --white: #ffffff;
+  }
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: var(--black);
+    color: var(--text);
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* CUSTOM CURSOR */
+  .cursor {
+    width: 12px; height: 12px;
+    background: var(--accent);
+    border-radius: 50%;
+    position: fixed; top: 0; left: 0;
+    pointer-events: none; z-index: 9999;
+    transform: translate(-50%, -50%);
+    transition: transform 0.1s, width 0.2s, height 0.2s;
+  }
+  .cursor-ring {
+    width: 36px; height: 36px;
+    border: 1.5px solid var(--accent);
+    border-radius: 50%;
+    position: fixed; top: 0; left: 0;
+    pointer-events: none; z-index: 9998;
+    transform: translate(-50%, -50%);
+    transition: all 0.15s ease;
+    opacity: 0.6;
+  }
+  body:hover .cursor { opacity: 1; }
+
+  /* NAV */
+  nav {
+    position: fixed; top: 0; left: 0; width: 100%; z-index: 100;
+    padding: 20px 60px;
+    display: flex; align-items: center; justify-content: space-between;
+    background: transparent;
+    transition: background 0.4s, padding 0.4s;
+  }
+  nav.scrolled {
+    background: rgba(10,10,10,0.95);
+    padding: 14px 60px;
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+  }
+  .nav-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px;
+    letter-spacing: 3px;
+    color: var(--white);
+    text-decoration: none;
+  }
+  .nav-logo span { color: var(--accent); }
+  .nav-links {
+    display: flex; gap: 40px; list-style: none;
+  }
+  .nav-links a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    transition: color 0.2s;
+    position: relative;
+  }
+  .nav-links a::after {
+    content: '';
+    position: absolute; bottom: -4px; left: 0;
+    width: 0; height: 1px;
+    background: var(--accent);
+    transition: width 0.3s;
+  }
+  .nav-links a:hover { color: var(--white); }
+  .nav-links a:hover::after { width: 100%; }
+  .nav-cta {
+    background: var(--accent);
+    color: var(--black) !important;
+    padding: 10px 24px;
+    border-radius: 2px;
+    font-weight: 600 !important;
+    letter-spacing: 1px;
+    transition: background 0.2s, transform 0.2s !important;
+  }
+  .nav-cta:hover { background: var(--accent2) !important; transform: translateY(-1px); }
+  .nav-cta::after { display: none !important; }
+
+  /* HAMBURGER */
+  .hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; z-index: 200; }
+  .hamburger span { display: block; width: 26px; height: 2px; background: var(--white); transition: all 0.3s; }
+
+  /* MOBILE MENU */
+  .mobile-menu {
+    display: none; position: fixed; inset: 0;
+    background: var(--black);
+    flex-direction: column; align-items: center; justify-content: center;
+    gap: 36px; z-index: 150;
+  }
+  .mobile-menu.open { display: flex; animation: fadeIn 0.3s ease; }
+  .mobile-menu a {
+    color: var(--white); text-decoration: none;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 42px; letter-spacing: 4px;
+    transition: color 0.2s;
+  }
+  .mobile-menu a:hover { color: var(--accent); }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 120px 60px 80px;
+    position: relative; overflow: hidden;
+  }
+  .hero-bg {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 70% 60% at 80% 50%, rgba(245,166,35,0.06) 0%, transparent 70%),
+                radial-gradient(ellipse 40% 40% at 20% 80%, rgba(245,166,35,0.04) 0%, transparent 60%);
+  }
+  .hero-grid {
+    position: absolute; inset: 0; opacity: 0.04;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px);
+    background-size: 80px 80px;
+  }
+  .hero-tag {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 28px;
+    opacity: 0; animation: slideUp 0.8s ease 0.2s forwards;
+  }
+  .hero-tag::before {
+    content: ''; width: 30px; height: 1px; background: var(--accent);
+  }
+  h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(72px, 10vw, 140px);
+    line-height: 0.92;
+    letter-spacing: 2px;
+    color: var(--white);
+    max-width: 900px;
+    opacity: 0; animation: slideUp 0.8s ease 0.4s forwards;
+  }
+  h1 .accent { color: var(--accent); }
+  .hero-desc {
+    margin-top: 32px;
+    font-size: 17px; color: var(--muted);
+    max-width: 480px; line-height: 1.7;
+    opacity: 0; animation: slideUp 0.8s ease 0.6s forwards;
+  }
+  .hero-actions {
+    margin-top: 48px; display: flex; gap: 16px; flex-wrap: wrap;
+    opacity: 0; animation: slideUp 0.8s ease 0.8s forwards;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: var(--black);
+    padding: 16px 40px;
+    font-size: 13px; font-weight: 600;
+    letter-spacing: 2px; text-transform: uppercase;
+    text-decoration: none; border-radius: 2px;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(245,166,35,0.3);
+  }
+  .btn-outline {
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 16px 40px;
+    font-size: 13px; font-weight: 500;
+    letter-spacing: 2px; text-transform: uppercase;
+    text-decoration: none; border-radius: 2px;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+  .hero-stats {
+    margin-top: 80px;
+    display: flex; gap: 60px; flex-wrap: wrap;
+    opacity: 0; animation: slideUp 0.8s ease 1s forwards;
+  }
+  .stat { border-left: 2px solid var(--accent); padding-left: 20px; }
+  .stat-number {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 48px; color: var(--white); letter-spacing: 2px;
+  }
+  .stat-label { font-size: 12px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
+  .hero-scroll {
+    position: absolute; bottom: 40px; left: 60px;
+    display: flex; align-items: center; gap: 12px;
+    color: var(--muted); font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    opacity: 0; animation: slideUp 0.8s ease 1.2s forwards;
+  }
+  .scroll-line {
+    width: 40px; height: 1px; background: var(--muted);
+    position: relative; overflow: hidden;
+  }
+  .scroll-line::after {
+    content: '';
+    position: absolute; top: 0; left: -100%;
+    width: 100%; height: 100%; background: var(--accent);
+    animation: scrollAnim 2s ease infinite;
+  }
+
+  /* TICKER */
+  .ticker {
+    background: var(--accent);
+    padding: 14px 0; overflow: hidden;
+    position: relative;
+  }
+  .ticker-track {
+    display: flex; gap: 0;
+    animation: ticker 20s linear infinite;
+    white-space: nowrap;
+  }
+  .ticker-item {
+    flex-shrink: 0;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px; letter-spacing: 3px;
+    color: var(--black);
+    padding: 0 40px;
+  }
+  .ticker-dot {
+    color: rgba(0,0,0,0.4);
+  }
+
+  /* SECTIONS */
+  section { padding: 100px 60px; }
+  .section-label {
+    font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 16px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .section-label::before { content: ''; width: 24px; height: 1px; background: var(--accent); }
+  h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(48px, 6vw, 80px);
+    letter-spacing: 2px; color: var(--white);
+    line-height: 1; margin-bottom: 20px;
+  }
+  .section-sub {
+    font-size: 16px; color: var(--muted); max-width: 500px; line-height: 1.7;
+    margin-bottom: 60px;
+  }
+
+  /* SERVICES */
+  #services { background: var(--dark); }
+  .services-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1px; background: var(--border); border: 1px solid var(--border);
+  }
+  .service-card {
+    background: var(--dark);
+    padding: 48px 40px;
+    position: relative; overflow: hidden;
+    transition: background 0.3s;
+  }
+  .service-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0;
+    width: 0; height: 2px;
+    background: var(--accent);
+    transition: width 0.4s ease;
+  }
+  .service-card:hover::before { width: 100%; }
+  .service-card:hover { background: var(--card); }
+  .service-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 56px; color: var(--border);
+    line-height: 1; margin-bottom: 24px;
+    transition: color 0.3s;
+  }
+  .service-card:hover .service-num { color: var(--accent); }
+  .service-icon {
+    width: 48px; height: 48px;
+    background: var(--border);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 20px;
+    transition: background 0.3s;
+    font-size: 22px;
+  }
+  .service-card:hover .service-icon { background: rgba(245,166,35,0.1); }
+  .service-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 28px; letter-spacing: 1px;
+    color: var(--white); margin-bottom: 12px;
+  }
+  .service-text { font-size: 14px; color: var(--muted); line-height: 1.7; }
+
+  /* WHY */
+  #why { background: var(--black); }
+  .why-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center;
+  }
+  .why-visual {
+    position: relative; height: 500px;
+  }
+  .why-block {
+    position: absolute;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 4px; padding: 32px;
+  }
+  .why-block-1 { top: 0; left: 0; right: 60px; }
+  .why-block-2 { bottom: 60px; right: 0; left: 60px; }
+  .why-block-3 {
+    bottom: 0; left: 0; width: 140px;
+    background: var(--accent); border: none;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 4px; aspect-ratio: 1;
+  }
+  .why-block-3 .big { font-family: 'Bebas Neue', sans-serif; font-size: 48px; color: var(--black); }
+  .why-block-3 .small { font-size: 10px; letter-spacing: 2px; color: var(--black); text-transform: uppercase; }
+  .why-block-title { font-size: 12px; letter-spacing: 2px; color: var(--accent); text-transform: uppercase; margin-bottom: 12px; }
+  .why-block-text { font-size: 15px; color: var(--text); line-height: 1.6; }
+  .why-list { list-style: none; display: flex; flex-direction: column; gap: 24px; }
+  .why-item {
+    display: flex; align-items: flex-start; gap: 20px;
+    padding: 24px; background: var(--card);
+    border: 1px solid var(--border); border-radius: 4px;
+    transition: border-color 0.3s;
+  }
+  .why-item:hover { border-color: var(--accent); }
+  .why-item-icon { font-size: 24px; flex-shrink: 0; margin-top: 2px; }
+  .why-item-title { font-weight: 600; color: var(--white); margin-bottom: 4px; }
+  .why-item-text { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+  /* REVIEWS */
+  #reviews { background: var(--dark); }
+  .reviews-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+  }
+  .review-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 4px; padding: 36px;
+    position: relative; overflow: hidden;
+    transition: transform 0.3s, border-color 0.3s;
+  }
+  .review-card:hover { transform: translateY(-4px); border-color: rgba(245,166,35,0.3); }
+  .review-stars { color: var(--accent); font-size: 18px; margin-bottom: 20px; letter-spacing: 2px; }
+  .review-text { font-size: 15px; color: var(--text); line-height: 1.7; margin-bottom: 28px; font-style: italic; }
+  .review-author { font-size: 13px; font-weight: 600; color: var(--white); }
+  .review-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .rating-badge {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: rgba(245,166,35,0.1); border: 1px solid rgba(245,166,35,0.3);
+    border-radius: 100px; padding: 8px 20px;
+    margin-bottom: 40px;
+    font-size: 13px; color: var(--accent); font-weight: 500;
+  }
+  .rating-badge strong { font-size: 18px; font-weight: 700; }
+
+  /* CONTACT */
+  #contact { background: var(--black); }
+  .contact-wrapper {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: start;
+  }
+  .contact-info { display: flex; flex-direction: column; gap: 24px; }
+  .contact-item {
+    display: flex; align-items: center; gap: 20px;
+    padding: 24px; background: var(--card);
+    border: 1px solid var(--border); border-radius: 4px;
+    text-decoration: none; transition: border-color 0.3s, transform 0.2s;
+  }
+  .contact-item:hover { border-color: var(--accent); transform: translateX(4px); }
+  .contact-item-icon {
+    width: 44px; height: 44px;
+    background: rgba(245,166,35,0.1); border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; flex-shrink: 0;
+  }
+  .contact-item-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 2px; }
+  .contact-item-value { color: var(--white); font-weight: 500; margin-top: 2px; }
+  .contact-form { display: flex; flex-direction: column; gap: 16px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .form-group { display: flex; flex-direction: column; gap: 8px; }
+  .form-group label { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+  .form-group input,
+  .form-group textarea {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 2px; padding: 14px 18px;
+    color: var(--text); font-family: 'Outfit', sans-serif; font-size: 15px;
+    outline: none; transition: border-color 0.2s;
+    resize: none;
+  }
+  .form-group input:focus,
+  .form-group textarea:focus { border-color: var(--accent); }
+  .form-group textarea { min-height: 120px; }
+  .form-submit {
+    background: var(--accent); color: var(--black);
+    border: none; padding: 16px; border-radius: 2px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;
+    cursor: pointer; transition: background 0.2s, transform 0.2s;
+  }
+  .form-submit:hover { background: var(--accent2); transform: translateY(-1px); }
+
+  /* MAP */
+  .map-section {
+    padding: 0 60px 80px;
+    background: var(--black);
+  }
+  .map-container {
+    border: 1px solid var(--border); border-radius: 4px; overflow: hidden;
+    height: 360px; position: relative;
+    background: var(--card);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .map-placeholder {
+    text-align: center;
+  }
+  .map-placeholder .icon { font-size: 48px; margin-bottom: 16px; }
+  .map-placeholder p { color: var(--muted); font-size: 14px; }
+  .map-placeholder strong { color: var(--white); display: block; margin-top: 8px; font-size: 16px; }
+
+  /* FOOTER */
+  footer {
+    background: var(--dark); border-top: 1px solid var(--border);
+    padding: 60px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 24px;
+  }
+  .footer-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px; letter-spacing: 3px; color: var(--white);
+  }
+  .footer-logo span { color: var(--accent); }
+  .footer-links { display: flex; gap: 32px; flex-wrap: wrap; }
+  .footer-links a { color: var(--muted); text-decoration: none; font-size: 13px; transition: color 0.2s; }
+  .footer-links a:hover { color: var(--accent); }
+  .footer-copy { color: var(--muted); font-size: 12px; width: 100%; margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); text-align: center; }
+
+  /* SCROLL REVEAL */
+  .reveal { opacity: 0; transform: translateY(40px); transition: opacity 0.8s ease, transform 0.8s ease; }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  /* ANIMATIONS */
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes ticker {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+  @keyframes scrollAnim {
+    0% { left: -100%; }
+    100% { left: 100%; }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 900px) {
+    nav { padding: 18px 24px; }
+    nav.scrolled { padding: 14px 24px; }
+    .nav-links { display: none; }
+    .hamburger { display: flex; }
+    .hero { padding: 100px 24px 60px; }
+    .hero-scroll { left: 24px; }
+    section { padding: 70px 24px; }
+    .map-section { padding: 0 24px 60px; }
+    .why-grid { grid-template-columns: 1fr; }
+    .why-visual { display: none; }
+    .contact-wrapper { grid-template-columns: 1fr; }
+    .form-row { grid-template-columns: 1fr; }
+    footer { padding: 40px 24px; flex-direction: column; align-items: flex-start; }
+    .hero-stats { gap: 32px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Cursor -->
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- Nav -->
+<nav id="nav">
+  <a href="#" class="nav-logo">NN<span>.</span>LOGISTICS</a>
+  <ul class="nav-links">
+    <li><a href="#services">Услуги</a></li>
+    <li><a href="#why">О нас</a></li>
+    <li><a href="#reviews">Отзывы</a></li>
+    <li><a href="#contact" class="nav-cta">Связаться</a></li>
+  </ul>
+  <div class="hamburger" id="hamburger">
+    <span></span><span></span><span></span>
+  </div>
+</nav>
+
+<!-- Mobile Menu -->
+<div class="mobile-menu" id="mobileMenu">
+  <a href="#services" onclick="closeMobile()">Услуги</a>
+  <a href="#why" onclick="closeMobile()">О нас</a>
+  <a href="#reviews" onclick="closeMobile()">Отзывы</a>
+  <a href="#contact" onclick="closeMobile()">Связаться</a>
+</div>
+
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-tag">Бишкек · Логистика · Грузоперевозки</div>
+  <h1>ДОСТАВИМ<br>КУДА УГОДНО<span class="accent">.</span></h1>
+  <p class="hero-desc">NN Logistics — надёжный партнёр по грузоперевозкам. Быстро, безопасно и точно в срок — из любой точки мира.</p>
+  <div class="hero-actions">
+    <a href="#contact" class="btn-primary">Получить расчёт</a>
+    <a href="#services" class="btn-outline">Наши услуги</a>
+  </div>
+  <div class="hero-stats">
+    <div class="stat">
+      <div class="stat-number">5.0</div>
+      <div class="stat-label">Рейтинг 2ГИС</div>
+    </div>
+    <div class="stat">
+      <div class="stat-number">12+</div>
+      <div class="stat-label">Отзывов</div>
+    </div>
+    <div class="stat">
+      <div class="stat-number">24/7</div>
+      <div class="stat-label">Поддержка</div>
+    </div>
+  </div>
+  <div class="hero-scroll">
+    <div class="scroll-line"></div>
+    Прокрутите вниз
+  </div>
+</section>
+
+<!-- Ticker -->
+<div class="ticker">
+  <div class="ticker-track">
+    <span class="ticker-item">АВИАПЕРЕВОЗКИ <span class="ticker-dot">◆</span></span>
+    <span class="ticker-item">АВТОДОСТАВКА <span class="ticker-dot">◆</span></span>
+    <span class="ticker-item">МОРСКИЕ ГРУЗЫ <span class="ticker-dot">◆</span></span>
+    <span class="ticker-item">СКЛАДИРОВАНИЕ <span class="ticker-dot">◆</span></span>
+    <span class="ticker-item">ТАМОЖНЯ <span class="ticker-dot">◆</span></span>
+    <span class="ticker-item">СБОРНЫЕ ГРУЗЫ <span class="ticker-dot">◆</span></span>
+    <span class="ticker-item">АВИАПЕРЕВОЗКИ <span class="ticker-dot">◆</span></span>
+    <span class="ticker-item">АВТОДОСТАВКА <span class="ticker-dot">◆</span></span>
+    <span class="ticker-item">МОРСКИЕ ГРУЗЫ <span class="ticker-dot">◆</span></span>
+    <span class="ticker-item">СКЛАДИРОВАНИЕ <span class="ticker-dot">◆</span></span>
+    <span class="ticker-item">ТАМОЖНЯ <span class="ticker-dot">◆</span></span>
+    <span class="ticker-item">СБОРНЫЕ ГРУЗЫ <span class="ticker-dot">◆</span></span>
+  </div>
+</div>
+
+<!-- Services -->
+<section id="services">
+  <div class="section-label">Что мы делаем</div>
+  <h2>НАШИ УСЛУГИ</h2>
+  <p class="section-sub">Полный спектр логистических решений для вашего бизнеса — от малого до крупного груза.</p>
+  <div class="services-grid reveal">
+    <div class="service-card">
+      <div class="service-num">01</div>
+      <div class="service-icon">✈️</div>
+      <div class="service-title">Авиаперевозки</div>
+      <p class="service-text">Срочная доставка грузов по всему миру. Прямые и сборные рейсы, полный и частичный фрахт.</p>
+    </div>
+    <div class="service-card">
+      <div class="service-num">02</div>
+      <div class="service-icon">🚚</div>
+      <div class="service-title">Автодоставка</div>
+      <p class="service-text">Перевозка грузов любого размера по Кыргызстану и СНГ. FTL и LTL отправки, рефрижераторы.</p>
+    </div>
+    <div class="service-card">
+      <div class="service-num">03</div>
+      <div class="service-icon">🚢</div>
+      <div class="service-title">Морские грузы</div>
+      <p class="service-text">FCL и LCL контейнерные перевозки. Негабаритные и проектные грузы в любую точку мира.</p>
+    </div>
+    <div class="service-card">
+      <div class="service-num">04</div>
+      <div class="service-icon">🏭</div>
+      <div class="service-title">Складирование</div>
+      <p class="service-text">Ответственное хранение, комплектация и обработка грузов на современных складах.</p>
+    </div>
+    <div class="service-card">
+      <div class="service-num">05</div>
+      <div class="service-icon">📋</div>
+      <div class="service-title">Таможня</div>
+      <p class="service-text">Профессиональное таможенное оформление, декларирование, сертификация грузов.</p>
+    </div>
+    <div class="service-card">
+      <div class="service-num">06</div>
+      <div class="service-icon">📦</div>
+      <div class="service-title">Сборные грузы</div>
+      <p class="service-text">Экономичная доставка небольших партий товаров. Консолидация грузов из Китая и других стран.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Why -->
+<section id="why">
+  <div class="why-grid">
+    <div class="why-visual reveal">
+      <div class="why-block why-block-1">
+        <div class="why-block-title">Местоположение</div>
+        <div class="why-block-text">Бишкек, ул. Манаса 180, 3 этаж — в центре города, удобный доступ для клиентов</div>
+      </div>
+      <div class="why-block why-block-2">
+        <div class="why-block-title">Режим работы</div>
+        <div class="why-block-text">Пн–Пт 09:00–18:00. WhatsApp и Telegram доступны для срочных запросов круглосуточно.</div>
+      </div>
+      <div class="why-block why-block-3">
+        <div class="big">5.0</div>
+        <div class="small">2ГИС</div>
+      </div>
+    </div>
+    <div>
+      <div class="section-label">Почему мы</div>
+      <h2>НАДЁЖНОСТЬ В КАЖДОЙ ПОСТАВКЕ</h2>
+      <p class="section-sub">Клиенты выбирают нас за честность, скорость и профессиональный подход к каждому грузу.</p>
+      <ul class="why-list reveal">
+        <li class="why-item">
+          <div class="why-item-icon">⚡</div>
+          <div>
+            <div class="why-item-title">Быстрая обработка заявок</div>
+            <p class="why-item-text">Ответим на запрос в течение 30 минут и предложим оптимальное решение.</p>
+          </div>
+        </li>
+        <li class="why-item">
+          <div class="why-item-icon">🔍</div>
+          <div>
+            <div class="why-item-title">Отслеживание в реальном времени</div>
+            <p class="why-item-text">Вы всегда знаете, где находится ваш груз — от отправки до получения.</p>
+          </div>
+        </li>
+        <li class="why-item">
+          <div class="why-item-icon">🤝</div>
+          <div>
+            <div class="why-item-title">Персональный менеджер</div>
+            <p class="why-item-text">Каждый клиент получает личного куратора, который ведёт груз от А до Я.</p>
+          </div>
+        </li>
+        <li class="why-item">
+          <div class="why-item-icon">💰</div>
+          <div>
+            <div class="why-item-title">Прозрачное ценообразование</div>
+            <p class="why-item-text">Никаких скрытых комиссий. Полная стоимость оговаривается заранее.</p>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- Reviews -->
+<section id="reviews">
+  <div class="section-label">Мнения клиентов</div>
+  <h2>ОТЗЫВЫ</h2>
+  <div class="rating-badge">
+    <strong>5.0</strong> ★★★★★ на 2ГИС · 12 оценок
+  </div>
+  <div class="reviews-grid reveal">
+    <div class="review-card">
+      <div class="review-stars">★★★★★</div>
+      <p class="review-text">«Отличная компания! Груз пришёл вовремя, всё упаковано аккуратно. Менеджеры всегда на связи и отвечают быстро.»</p>
+      <div class="review-author">Алибек М.</div>
+      <div class="review-meta">Постоянный клиент · 2ГИС</div>
+    </div>
+    <div class="review-card">
+      <div class="review-stars">★★★★★</div>
+      <p class="review-text">«Работаем с NN Logistics уже несколько месяцев. Надёжные ребята, всегда выполняют обещания. Рекомендую!»</p>
+      <div class="review-author">Гульмира А.</div>
+      <div class="review-meta">Бизнес-клиент · 2ГИС</div>
+    </div>
+    <div class="review-card">
+      <div class="review-stars">★★★★★</div>
+      <p class="review-text">«Очень профессиональный подход. Помогли с таможенным оформлением и доставили груз из Китая без проблем.»</p>
+      <div class="review-author">Тимур К.</div>
+      <div class="review-meta">Клиент · 2ГИС</div>
+    </div>
+  </div>
+</section>
+
+<!-- Contact -->
+<section id="contact">
+  <div class="section-label">Напишите нам</div>
+  <h2>СВЯЖИТЕСЬ С НАМИ</h2>
+  <p class="section-sub">Готовы обсудить ваш груз? Заполните форму или свяжитесь удобным способом.</p>
+  <div class="contact-wrapper reveal">
+    <div class="contact-info">
+      <a href="tel:+996995666896" class="contact-item">
+        <div class="contact-item-icon">📞</div>
+        <div>
+          <div class="contact-item-label">Телефон</div>
+          <div class="contact-item-value">+996 995 666 896</div>
+        </div>
+      </a>
+      <a href="https://wa.me/996995666896" target="_blank" class="contact-item">
+        <div class="contact-item-icon">💬</div>
+        <div>
+          <div class="contact-item-label">WhatsApp</div>
+          <div class="contact-item-value">+996 995 666 896</div>
+        </div>
+      </a>
+      <a href="https://t.me/+996995666896" target="_blank" class="contact-item">
+        <div class="contact-item-icon">✈️</div>
+        <div>
+          <div class="contact-item-label">Telegram</div>
+          <div class="contact-item-value">@nn_logistics</div>
+        </div>
+      </a>
+      <a href="https://instagram.com/nn_logistics_" target="_blank" class="contact-item">
+        <div class="contact-item-icon">📸</div>
+        <div>
+          <div class="contact-item-label">Instagram</div>
+          <div class="contact-item-value">@nn_logistics_</div>
+        </div>
+      </a>
+      <div class="contact-item" style="cursor:default;">
+        <div class="contact-item-icon">📍</div>
+        <div>
+          <div class="contact-item-label">Адрес</div>
+          <div class="contact-item-value">ул. Манаса 180, 3 этаж, Бишкек</div>
+        </div>
+      </div>
+    </div>
+    <div class="contact-form">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Ваше имя</label>
+          <input type="text" placeholder="Иван Иванов">
+        </div>
+        <div class="form-group">
+          <label>Телефон</label>
+          <input type="tel" placeholder="+996 ___  __ __">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Откуда</label>
+          <input type="text" placeholder="Город отправления">
+        </div>
+        <div class="form-group">
+          <label>Куда</label>
+          <input type="text" placeholder="Город назначения">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Описание груза</label>
+        <textarea placeholder="Тип груза, вес, габариты..."></textarea>
+      </div>
+      <button class="form-submit">Отправить заявку →</button>
+    </div>
+  </div>
+</section>
+
+<!-- Map -->
+<div class="map-section">
+  <div class="map-container">
+    <div class="map-placeholder">
+      <div class="icon">📍</div>
+      <p>Мы находимся в центре Бишкека</p>
+      <strong>ул. Манаса 180, 3 этаж</strong>
+      <p style="margin-top:16px;">
+        <a href="https://2gis.kg/bishkek/firm/70000001089219845" target="_blank"
+          style="color: var(--accent); text-decoration: none; font-size:13px; letter-spacing:1px;">
+          Открыть в 2ГИС →
+        </a>
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-logo">NN<span>.</span>LOGISTICS</div>
+  <div class="footer-links">
+    <a href="#services">Услуги</a>
+    <a href="#why">О нас</a>
+    <a href="#reviews">Отзывы</a>
+    <a href="#contact">Контакты</a>
+  </div>
+  <p class="footer-copy">© 2025 NN Logistics. Бишкек, Кыргызстан. Все права защищены.</p>
+</footer>
+
+<script>
+  // Cursor
+  const cursor = document.getElementById('cursor');
+  const ring = document.getElementById('cursorRing');
+  let mx = 0, my = 0, rx = 0, ry = 0;
+  document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; cursor.style.left = mx+'px'; cursor.style.top = my+'px'; });
+  function animateRing() {
+    rx += (mx - rx) * 0.12; ry += (my - ry) *.12;
+    ring.style.left = rx+'px'; ring.style.top = ry+'px';
+    requestAnimationFrame(animateRing);
+  }
+  animateRing();
+
+  // Nav scroll
+  window.addEventListener('scroll', () => {
+    document.getElementById('nav').classList.toggle('scrolled', window.scrollY > 60);
+  });
+
+  // Mobile menu
+  const ham = document.getElementById('hamburger');
+  const mob = document.getElementById('mobileMenu');
+  ham.addEventListener('click', () => { mob.classList.toggle('open'); });
+  function closeMobile() { mob.classList.remove('open'); }
+
+  // Scroll reveal
+  const reveals = document.querySelectorAll('.reveal');
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); } });
+  }, { threshold: 0.12 });
+  reveals.forEach(r => obs.observe(r));
+
+  // Stagger children
+  document.querySelectorAll('.services-grid .service-card').forEach((c, i) => {
+    c.style.transitionDelay = `${i * 0.08}s`;
+    c.classList.add('reveal');
+    obs.observe(c);
+  });
+  document.querySelectorAll('.why-item').forEach((c, i) => {
+    c.style.transitionDelay = `${i * 0.1}s`;
+    c.classList.add('reveal');
+    obs.observe(c);
+  });
+  document.querySelectorAll('.review-card').forEach((c, i) => {
+    c.style.transitionDelay = `${i * 0.1}s`;
+    c.classList.add('reveal');
+    obs.observe(c);
+  });
+  document.querySelectorAll('.contact-item').forEach((c, i) => {
+    c.style.transitionDelay = `${i * 0.07}s`;
+    c.classList.add('reveal');
+    obs.observe(c);
+  });
+
+  // Form submit feedback
+  document.querySelector('.form-submit').addEventListener('click', () => {
+    const btn = document.querySelector('.form-submit');
+    btn.textContent = '✓ Заявка отправлена!';
+    btn.style.background = '#2ecc71';
+    setTimeout(() => { btn.textContent = 'Отправить заявку →'; btn.style.background = ''; }, 3000);
+  });
+</script>
+</body>
+</html>
